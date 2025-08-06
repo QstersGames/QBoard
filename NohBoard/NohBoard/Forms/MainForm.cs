@@ -677,7 +677,11 @@ namespace ThoNohT.NohBoard.Forms
                 // Record heatmap data when key is pressed
                 if (pressed)
                 {
-                    Extra.HeatmapManager.RecordKeyPress(kkDef.Id);
+                    // For keyboard keys, record each keycode (combination keys can have multiple)
+                    foreach (var keyCode in kkDef.KeyCodes)
+                    {
+                        Extra.HeatmapManager.RecordKeyPress(keyCode);
+                    }
                 }
 
                 // For heatmap-enabled styles, always render unpressed keys to show heat colors
@@ -693,7 +697,8 @@ namespace ThoNohT.NohBoard.Forms
                 // Record heatmap data when mouse key is pressed
                 if (pressed)
                 {
-                    Extra.HeatmapManager.RecordKeyPress(mkDef.Id);
+                    // For mouse keys, record the single keycode
+                    Extra.HeatmapManager.RecordKeyPress(mkDef.KeyCodes.Single());
                 }
                 
                 // For heatmap-enabled styles, always render unpressed keys to show heat colors

@@ -30,10 +30,28 @@ namespace ThoNohT.NohBoard.Extra
     /// </summary>
     public static class HeatmapManager
     {
+        #region Configuration Constants
+        
+        /// <summary>
+        /// Blend factor multiplier for color blending. Higher values make heat colors more visible at lower heat levels.
+        /// Range: 0.5 to 3.0. Default: 1.5
+        /// </summary>
+        private const double BlendAmplification = 1.5;
+        
+        /// <summary>
+        /// Whether to use logarithmic scaling for heat levels. 
+        /// True = smoother curve, prevents overwhelming from heavy-use keys
+        /// False = linear scaling, more dramatic differences
+        /// </summary>
+        private const bool UseLogarithmicScaling = true;
+        
+        #endregion
+        
         #region Fields
 
         /// <summary>
-        /// Dictionary storing press counts for each key ID.
+        /// Dictionary storing press counts for each keycode.
+        /// This allows heatmap data to persist across different keyboard layouts.
         /// </summary>
         private static readonly Dictionary<int, long> keyPressCounts = new Dictionary<int, long>();
 
@@ -81,31 +99,31 @@ namespace ThoNohT.NohBoard.Extra
         #region Public Methods
 
         /// <summary>
-        /// Records a key press for the specified key ID.
+        /// Records a key press for the specified keycode.
         /// Only counts new presses, not held keys.
         /// </summary>
-        /// <param name="keyId">The ID of the key that was pressed.</param>
-        public static void RecordKeyPress(int keyId)
+        /// <param name="keyCode">The keycode of the key that was pressed.</param>
+        public static void RecordKeyPress(int keyCode)
         {
             // Only count if this key wasn't pressed in the previous frame
-            if (!previouslyPressedKeys.Contains(keyId))
+            if (!previouslyPressedKeys.Contains(keyCode))
             {
                 // Increment the press count for this key
-                if (keyPressCounts.ContainsKey(keyId))
+                if (keyPressCounts.ContainsKey(keyCode))
                 {
-                    keyPressCounts[keyId]++;
+                    keyPressCounts[keyCode]++;
                 }
                 else
                 {
-                    keyPressCounts[keyId] = 1;
+                    keyPressCounts[keyCode] = 1;
                 }
 
                 // Update statistics
                 totalPresses++;
-                maxPressCount = Math.Max(maxPressCount, keyPressCounts[keyId]);
+                maxPressCount = Math.Max(maxPressCount, keyPressCounts[keyCode]);
                 
                 // Debug output to show current state
-                System.Diagnostics.Debug.WriteLine($"Key {keyId} press count: {keyPressCounts[keyId]} (Total: {totalPresses})");
+                System.Diagnostics.Debug.WriteLine($"KeyCode {keyCode} press count: {keyPressCounts[keyCode]} (Total: {totalPresses})");
                 
                 // Trigger a style refresh if heatmap is enabled for current style
                 // This forces the background brush cache to be invalidated so colors update immediately
@@ -113,7 +131,7 @@ namespace ThoNohT.NohBoard.Extra
             }
 
             // Add to currently pressed keys
-            previouslyPressedKeys.Add(keyId);
+            previouslyPressedKeys.Add(keyCode);
         }
 
         /// <summary>
@@ -135,10 +153,10 @@ namespace ThoNohT.NohBoard.Extra
         /// <summary>
         /// Marks a key as no longer pressed. Should be called when keys are released.
         /// </summary>
-        /// <param name="keyId">The ID of the key that was released.</param>
-        public static void RecordKeyRelease(int keyId)
+        /// <param name="keyCode">The keycode of the key that was released.</param>
+        public static void RecordKeyRelease(int keyCode)
         {
-            previouslyPressedKeys.Remove(keyId);
+            previouslyPressedKeys.Remove(keyCode);
         }
 
         /// <summary>
@@ -152,44 +170,59 @@ namespace ThoNohT.NohBoard.Extra
         /// <summary>
         /// Gets the press count for a specific key.
         /// </summary>
-        /// <param name="keyId">The key ID to get the count for.</param>
+        /// <param name="keyCode">The keycode to get the count for.</param>
         /// <returns>The number of times this key has been pressed.</returns>
-        public static long GetKeyPressCount(int keyId)
+        public static long GetKeyPressCount(int keyCode)
         {
-            return keyPressCounts.TryGetValue(keyId, out var count) ? count : 0;
+            return keyPressCounts.TryGetValue(keyCode, out var count) ? count : 0;
         }
 
         /// <summary>
         /// Calculates the heat level (0.0 to 1.0) for a specific key based on its press count.
+        /// Uses logarithmic scaling to prevent heavily-used keys from overwhelming the heatmap.
         /// </summary>
-        /// <param name="keyId">The key ID to calculate heat for.</param>
+        /// <param name="keyCode">The keycode to calculate heat for.</param>
         /// <returns>Heat level from 0.0 (cold) to 1.0 (hottest).</returns>
-        public static double GetKeyHeatLevel(int keyId)
+        public static double GetKeyHeatLevel(int keyCode)
         {
             if (maxPressCount == 0) return 0.0;
 
-            var pressCount = GetKeyPressCount(keyId);
-            return (double)pressCount / maxPressCount;
+            var pressCount = GetKeyPressCount(keyCode);
+            if (pressCount == 0) return 0.0;
+
+            if (UseLogarithmicScaling)
+            {
+                // Logarithmic scaling to smooth out the curve
+                // This prevents heavily-used keys from making others invisible
+                var logPresses = Math.Log(pressCount + 1);
+                var logMaxPresses = Math.Log(maxPressCount + 1);
+                return logPresses / logMaxPresses;
+            }
+            else
+            {
+                // Linear scaling - more dramatic differences
+                return (double)pressCount / maxPressCount;
+            }
         }
 
         /// <summary>
         /// Gets the heatmap color multiplier for a specific key based on its press frequency.
         /// Returns a color that should be multiplied with the base style color.
         /// </summary>
-        /// <param name="keyId">The key ID to get the multiplier for.</param>
+        /// <param name="keyCode">The keycode to get the multiplier for.</param>
         /// <param name="baseColor">The base color from the style.</param>
         /// <returns>The color after applying heatmap multiplier.</returns>
-        public static Color ApplyHeatmapToColor(int keyId, Color baseColor)
+        public static Color ApplyHeatmapToColor(int keyCode, Color baseColor)
         {
-            var heatLevel = GetKeyHeatLevel(keyId);
+            var heatLevel = GetKeyHeatLevel(keyCode);
             if (heatLevel <= 0.0) return baseColor; // No heat, return original color
             
-            // Create heat color based on the scheme: Blue -> Purple -> Orange -> Red
+            // Create heat color based on the scheme: White -> Blue -> Orange -> Red
             var heatColor = CalculateHeatColor(heatLevel);
             
             // Blend the base color with the heat color
             // The more heat, the more the heat color dominates
-            var blendFactor = (float)Math.Min(heatLevel * 2.0, 1.0); // Double the effect for visibility
+            var blendFactor = (float)Math.Min(heatLevel * BlendAmplification, 1.0);
             
             var r = (int)(baseColor.R * (1 - blendFactor) + heatColor.R * blendFactor);
             var g = (int)(baseColor.G * (1 - blendFactor) + heatColor.G * blendFactor);
@@ -204,7 +237,7 @@ namespace ThoNohT.NohBoard.Extra
             // Debug output (only for significant heat levels to reduce spam)
             if (heatLevel > 0.1)
             {
-                System.Diagnostics.Debug.WriteLine($"Key {keyId}: Heat={heatLevel:F2}, Result=({resultColor.R},{resultColor.G},{resultColor.B})");
+                System.Diagnostics.Debug.WriteLine($"KeyCode {keyCode}: Heat={heatLevel:F2}, Result=({resultColor.R},{resultColor.G},{resultColor.B})");
             }
             
             return resultColor;
@@ -220,15 +253,13 @@ namespace ThoNohT.NohBoard.Extra
             // Clamp heat level to valid range
             heatLevel = Math.Max(0.0, Math.Min(1.0, heatLevel));
 
-            // Define color stops for the heatmap
+            // Define color stops for the heatmap: White -> Blue -> Orange -> Red
             var colorStops = new[]
             {
-                new { Level = 0.0,  Color = Color.FromArgb(255, 255, 255) }, // White
-                new { Level = 0.1,  Color = Color.FromArgb(173, 216, 230) }, // Light Blue
-                new { Level = 0.25, Color = Color.FromArgb(0, 100, 255) },   // Blue
-                new { Level = 0.5,  Color = Color.FromArgb(128, 0, 255) },   // Purple
-                new { Level = 0.75, Color = Color.FromArgb(255, 165, 0) },   // Orange
-                new { Level = 1.0,  Color = Color.FromArgb(255, 0, 0) }      // Red
+                new { Level = 0.0,  Color = Color.FromArgb(255, 255, 255) }, // White (0%)
+                new { Level = 0.33, Color = Color.FromArgb(0, 120, 255) },   // Blue (33%)
+                new { Level = 0.67, Color = Color.FromArgb(255, 165, 0) },   // Orange (67%)
+                new { Level = 1.0,  Color = Color.FromArgb(255, 0, 0) }      // Red (100%)
             };
 
             // Find the two color stops to interpolate between

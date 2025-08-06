@@ -426,8 +426,9 @@ namespace ThoNohT.NohBoard.Keyboard.ElementDefinitions
                 // Get the base color from the style
                 var baseColor = subStyle.Background;
                 
-                // Apply heatmap color blending
-                var heatmapColor = Extra.HeatmapManager.ApplyHeatmapToColor(this.Id, baseColor);
+                // Apply heatmap color blending using the primary keycode
+                var primaryKeyCode = this.KeyCodes.FirstOrDefault();
+                var heatmapColor = Extra.HeatmapManager.ApplyHeatmapToColor(primaryKeyCode, baseColor);
                 
                 // For heatmap, always create a new brush - don't use cache since colors change dynamically
                 // Check if there's a background image, if so we need to handle it differently
