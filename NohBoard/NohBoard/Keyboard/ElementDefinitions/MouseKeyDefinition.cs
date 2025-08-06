@@ -72,8 +72,8 @@ namespace ThoNohT.NohBoard.Keyboard.ElementDefinitions
                 this.TextPosition.X - (int)(txtSize.Width / 2),
                 this.TextPosition.Y - (int)(txtSize.Height / 2));
 
-            // Draw the background
-            var backgroundBrush = this.GetBackgroundBrush(subStyle, pressed);
+            // Draw the background - with heatmap support
+            var backgroundBrush = this.GetBackgroundBrushWithHeatmap(subStyle, pressed);
             g.FillPolygon(backgroundBrush, this.Boundaries.ConvertAll<Point>(x => x).ToArray());
 
             // Draw the text

@@ -475,6 +475,8 @@ namespace ThoNohT.NohBoard.Forms
             this.LoadKeyboard();
         }
 
+
+
         /// <summary>
         /// Opens the settings form.
         /// </summary>
@@ -593,10 +595,15 @@ namespace ThoNohT.NohBoard.Forms
             if (GlobalSettings.CurrentDefinition == null || !this.backBrushes.Any())
                 return;
 
-            // Fill the appropriate back brush.
-            e.Graphics.FillRectangle(
-                this.backBrushes[KeyboardState.ShiftDown][KeyboardState.CapsActive],
-                new Rectangle(0, 0, GlobalSettings.CurrentDefinition.Width, GlobalSettings.CurrentDefinition.Height));
+            // Fill the appropriate back brush only if heatmap is disabled
+            // For heatmap-enabled styles, we need to render each key individually to show heat colors
+            var heatmapEnabled = GlobalSettings.CurrentStyle?.HeatmapEnabled ?? false;
+            if (!heatmapEnabled)
+            {
+                e.Graphics.FillRectangle(
+                    this.backBrushes[KeyboardState.ShiftDown][KeyboardState.CapsActive],
+                    new Rectangle(0, 0, GlobalSettings.CurrentDefinition.Width, GlobalSettings.CurrentDefinition.Height));
+            }
 
             // Render all keys.
             KeyboardState.CheckKeyHolds(GlobalSettings.Settings.PressHold);
@@ -606,6 +613,10 @@ namespace ThoNohT.NohBoard.Forms
             MouseState.CheckScrollAndMovement();
             var scrollCounts = MouseState.ScrollCounts;
             var allDefs = GlobalSettings.CurrentDefinition.Elements;
+            
+            // Clear pressed keys for heatmap tracking (to only count new presses)
+            Extra.HeatmapManager.ClearPressedKeys();
+            
             foreach (var def in allDefs)
             {
                 this.Render(e.Graphics, def, allDefs, kbKeys, mouseKeys, scrollCounts, false);
@@ -663,14 +674,31 @@ namespace ThoNohT.NohBoard.Forms
                         && d.KeyCodes.All(kbKeys.Contains)
                         && d.KeyCodes.ContainsAll(kkDef.KeyCodes))) pressed = false;
 
-                if (!pressed && !alwaysRender) return;
+                // Record heatmap data when key is pressed
+                if (pressed)
+                {
+                    Extra.HeatmapManager.RecordKeyPress(kkDef.Id);
+                }
+
+                // For heatmap-enabled styles, always render unpressed keys to show heat colors
+                var heatmapEnabled = GlobalSettings.CurrentStyle?.HeatmapEnabled ?? false;
+                if (!pressed && !alwaysRender && !heatmapEnabled) return;
 
                 kkDef.Render(g, pressed, KeyboardState.ShiftDown, KeyboardState.CapsActive);
             }
             if (def is MouseKeyDefinition mkDef)
             {
                 var pressed = mouseKeys.Contains(mkDef.KeyCodes.Single());
-                if (pressed || alwaysRender)
+                
+                // Record heatmap data when mouse key is pressed
+                if (pressed)
+                {
+                    Extra.HeatmapManager.RecordKeyPress(mkDef.Id);
+                }
+                
+                // For heatmap-enabled styles, always render unpressed keys to show heat colors
+                var heatmapEnabledMouse = GlobalSettings.CurrentStyle?.HeatmapEnabled ?? false;
+                if (pressed || alwaysRender || heatmapEnabledMouse)
                     mkDef.Render(g, pressed, KeyboardState.ShiftDown, KeyboardState.CapsActive);
             }
             if (def is MouseScrollDefinition msDef)

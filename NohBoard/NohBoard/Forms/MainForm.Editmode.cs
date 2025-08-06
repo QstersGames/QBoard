@@ -335,16 +335,16 @@ namespace ThoNohT.NohBoard.Forms
         #region Keyboard input handling
 
         /// <summary>
-        /// Handles the key press event. Allows undo/redo, selection cancellation and manipulations using the arrow keys.
+        /// Handles the key press event. Allows undo/redo, selection cancellation, manipulations using the arrow keys, and heatmap toggle.
         /// </summary>
         /// <param name="msg">A <see cref="Message"/>, passed by reference, that represents the window message to process.</param>
         /// <param name="keyData">One of the <see cref="Keys"/> values that represents the key to process.</param>
         /// <returns><c>true</c> if the character was processed by the control; otherwise, <c>false</c>.</returns>
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
         {
-            if (!this.mnuToggleEditMode.Checked) return base.ProcessCmdKey(ref msg, keyData);
-
             var keyCode = keyData & Keys.KeyCode;
+
+            if (!this.mnuToggleEditMode.Checked) return base.ProcessCmdKey(ref msg, keyData);
 
             // Manipulations by keyboard keys.
             if (this.selectedDefinition != null && new[] { Keys.Up, Keys.Right, Keys.Down, Keys.Left }.Contains(keyCode))

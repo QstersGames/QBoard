@@ -67,6 +67,13 @@ namespace ThoNohT.NohBoard.Keyboard
         [DataMember]
         public string BackgroundImageFileName { get; set; }
 
+        /// <summary>
+        /// Indicates whether heatmap mode is enabled for this style.
+        /// When enabled, keys will change color based on press frequency.
+        /// </summary>
+        [DataMember]
+        public bool HeatmapEnabled { get; set; } = false;
+
         #endregion The keyboard itself
 
         #region Defaults for elements

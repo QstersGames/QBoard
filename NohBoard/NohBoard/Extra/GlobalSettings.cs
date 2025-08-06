@@ -214,6 +214,8 @@ namespace ThoNohT.NohBoard.Extra
         [DataMember]
         public int Y { get; set; } = 25;
 
+
+
         #endregion State
 
         #region Editing
@@ -254,6 +256,7 @@ namespace ThoNohT.NohBoard.Extra
 
                 Func<Rectangle, Point> getCenter = r => r.Location + new Size(r.Width / 2, r.Height / 2);
                 MouseState.SetMouseFromCenter(Settings.MouseFromCenter, Screen.AllScreens.Select(x => (x.Bounds, getCenter(x.Bounds))).ToList());
+                
                 return true;
             }
             catch (Exception ex)

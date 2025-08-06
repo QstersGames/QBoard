@@ -410,6 +410,43 @@ namespace ThoNohT.NohBoard.Keyboard.ElementDefinitions
         }
 
         /// <summary>
+        /// Returns a brush to use when rendering the background for the key, with heatmap support.
+        /// </summary>
+        /// <param name="subStyle">The substyle to use for rendering the key.</param>
+        /// <param name="pressed">Whether the key is pressed.</param>
+        /// <returns>A brush to use when rendering the background for the key.</returns>
+        protected Brush GetBackgroundBrushWithHeatmap(KeySubStyle subStyle, bool pressed)
+        {
+            // Check if heatmap is enabled for the current style
+            var heatmapEnabled = GlobalSettings.CurrentStyle?.HeatmapEnabled ?? false;
+            
+            // If heatmap is enabled and key is not pressed, apply heatmap color blending
+            if (heatmapEnabled && !pressed)
+            {
+                // Get the base color from the style
+                var baseColor = subStyle.Background;
+                
+                // Apply heatmap color blending
+                var heatmapColor = Extra.HeatmapManager.ApplyHeatmapToColor(this.Id, baseColor);
+                
+                // For heatmap, always create a new brush - don't use cache since colors change dynamically
+                // Check if there's a background image, if so we need to handle it differently
+                if (subStyle.BackgroundImageFileName != null && Extra.FileHelper.StyleImageExists(subStyle.BackgroundImageFileName))
+                {
+                    // For now, ignore heatmap for image backgrounds and use the regular brush
+                    return GetBackgroundBrush(subStyle, pressed);
+                }
+                else
+                {
+                    return new SolidBrush(heatmapColor);
+                }
+            }
+
+            // Otherwise, use the regular background brush (with caching)
+            return GetBackgroundBrush(subStyle, pressed);
+        }
+
+        /// <summary>
         /// Returns the bounding box of this element.
         /// </summary>
         /// <returns>A rectangle representing the bounding box of the element.</returns>
