@@ -434,8 +434,8 @@ namespace ThoNohT.NohBoard.Keyboard.ElementDefinitions
                 // Check if there's a background image, if so we need to handle it differently
                 if (subStyle.BackgroundImageFileName != null && Extra.FileHelper.StyleImageExists(subStyle.BackgroundImageFileName))
                 {
-                    // For now, ignore heatmap for image backgrounds and use the regular brush
-                    return GetBackgroundBrush(subStyle, pressed);
+                    // Create a tinted image brush for heatmap with image backgrounds
+                    return CreateTintedImageBrush(subStyle.BackgroundImageFileName, this.GetBoundingBox(), heatmapColor);
                 }
                 else
                 {
@@ -460,6 +460,52 @@ namespace ThoNohT.NohBoard.Keyboard.ElementDefinitions
             var max = new Point(xPositions.Max(), yPositions.Max());
 
             return new Rectangle(min, new Size(max.X - min.X, max.Y - min.Y));
+        }
+
+        /// <summary>
+        /// Creates a TextureBrush from an image tinted with the heatmap color.
+        /// </summary>
+        /// <param name="fileName">The filename of the image relative to the style's images folder.</param>
+        /// <param name="boundingBox">The bounding box to fit the brush in.</param>
+        /// <param name="tintColor">The color to tint the image with.</param>
+        /// <returns>A TextureBrush with the tinted image.</returns>
+        private TextureBrush CreateTintedImageBrush(string fileName, Rectangle boundingBox, Color tintColor)
+        {
+            var originalImg = Extra.ImageCache.Get(fileName);
+            var gu = GraphicsUnit.Pixel;
+            var imgBb = originalImg.GetBounds(ref gu);
+
+            // Create a new bitmap with the same dimensions as the original
+            var tintedImg = new Bitmap(originalImg.Width, originalImg.Height);
+            
+            using (var g = Graphics.FromImage(tintedImg))
+            {
+                // Create a color matrix to apply the tint
+                var tintMatrix = new System.Drawing.Imaging.ColorMatrix(new float[][]
+                {
+                    new float[] {tintColor.R / 255f, 0, 0, 0, 0},
+                    new float[] {0, tintColor.G / 255f, 0, 0, 0},
+                    new float[] {0, 0, tintColor.B / 255f, 0, 0},
+                    new float[] {0, 0, 0, 1, 0},
+                    new float[] {0, 0, 0, 0, 1}
+                });
+
+                var imageAttrib = new System.Drawing.Imaging.ImageAttributes();
+                imageAttrib.SetColorMatrix(tintMatrix);
+
+                // Draw the original image with the color matrix applied
+                g.DrawImage(originalImg, 
+                    new Rectangle(0, 0, originalImg.Width, originalImg.Height),
+                    0, 0, originalImg.Width, originalImg.Height,
+                    GraphicsUnit.Pixel, imageAttrib);
+            }
+
+            // Create a texture brush from the tinted image
+            var tex = new TextureBrush(tintedImg, imgBb);
+            tex.TranslateTransform(boundingBox.Left, boundingBox.Top);
+            tex.ScaleTransform(boundingBox.Width / imgBb.Width, boundingBox.Height / imgBb.Height);
+
+            return tex;
         }
 
         /// <summary>

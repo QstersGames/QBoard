@@ -36,7 +36,7 @@ namespace ThoNohT.NohBoard.Extra
         /// Blend factor multiplier for color blending. Higher values make heat colors more visible at lower heat levels.
         /// Range: 0.5 to 3.0. Default: 1.5
         /// </summary>
-        private const double BlendAmplification = 1.5;
+        private const double BlendAmplification = 1.0;
         
         /// <summary>
         /// Whether to use logarithmic scaling for heat levels. 
@@ -253,12 +253,11 @@ namespace ThoNohT.NohBoard.Extra
             // Clamp heat level to valid range
             heatLevel = Math.Max(0.0, Math.Min(1.0, heatLevel));
 
-            // Define color stops for the heatmap: White -> Blue -> Orange -> Red
+            // Define color stops for the heatmap: Navy -> Blue -> Green -> Yellow -> Red
             var colorStops = new[]
             {
-                new { Level = 0.0,  Color = Color.FromArgb(255, 255, 255) }, // White (0%)
-                new { Level = 0.33, Color = Color.FromArgb(0, 120, 255) },   // Blue (33%)
-                new { Level = 0.67, Color = Color.FromArgb(255, 165, 0) },   // Orange (67%)
+                new { Level = 0.0, Color = Color.FromArgb(255, 255, 255) },  // White (0%)
+                new { Level = 0.333,  Color = Color.FromArgb(255, 255, 0) },     // Navy (33%)
                 new { Level = 1.0,  Color = Color.FromArgb(255, 0, 0) }      // Red (100%)
             };
 
