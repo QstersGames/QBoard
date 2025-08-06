@@ -30,20 +30,16 @@ namespace ThoNohT.NohBoard.Extra
     /// </summary>
     public static class HeatmapManager
     {
-        #region Configuration Constants
+        #region Private Methods for Style Settings
         
         /// <summary>
-        /// Blend factor multiplier for color blending. Higher values make heat colors more visible at lower heat levels.
-        /// Range: 0.5 to 3.0. Default: 1.5
+        /// Gets the heatmap settings from the current style, or default values if none exist.
         /// </summary>
-        private const double BlendAmplification = 1.0;
-        
-        /// <summary>
-        /// Whether to use logarithmic scaling for heat levels. 
-        /// True = smoother curve, prevents overwhelming from heavy-use keys
-        /// False = linear scaling, more dramatic differences
-        /// </summary>
-        private const bool UseLogarithmicScaling = true;
+        /// <returns>The heatmap settings to use.</returns>
+        private static Keyboard.HeatmapSettings GetHeatmapSettings()
+        {
+            return GlobalSettings.CurrentStyle?.HeatmapSettings ?? new Keyboard.HeatmapSettings();
+        }
         
         #endregion
         
@@ -190,7 +186,9 @@ namespace ThoNohT.NohBoard.Extra
             var pressCount = GetKeyPressCount(keyCode);
             if (pressCount == 0) return 0.0;
 
-            if (UseLogarithmicScaling)
+            var settings = GetHeatmapSettings();
+
+            if (settings.UseLogarithmicScaling)
             {
                 // Logarithmic scaling to smooth out the curve
                 // This prevents heavily-used keys from making others invisible
@@ -222,7 +220,8 @@ namespace ThoNohT.NohBoard.Extra
             
             // Blend the base color with the heat color
             // The more heat, the more the heat color dominates
-            var blendFactor = (float)Math.Min(heatLevel * BlendAmplification, 1.0);
+            var settings = GetHeatmapSettings();
+            var blendFactor = (float)Math.Min(heatLevel * settings.BlendAmplification, 1.0);
             
             var r = (int)(baseColor.R * (1 - blendFactor) + heatColor.R * blendFactor);
             var g = (int)(baseColor.G * (1 - blendFactor) + heatColor.G * blendFactor);
@@ -253,16 +252,25 @@ namespace ThoNohT.NohBoard.Extra
             // Clamp heat level to valid range
             heatLevel = Math.Max(0.0, Math.Min(1.0, heatLevel));
 
-            // Define color stops for the heatmap: Navy -> Blue -> Green -> Yellow -> Red
-            var colorStops = new[]
+            // Get color stops from the current style
+            var settings = GetHeatmapSettings();
+            var colorStops = settings.ColorStops;
+
+            // Ensure we have at least one color stop
+            if (colorStops == null || colorStops.Count == 0)
             {
-                new { Level = 0.0, Color = Color.FromArgb(255, 255, 255) },  // White (0%)
-                new { Level = 0.333,  Color = Color.FromArgb(255, 255, 0) },     // Navy (33%)
-                new { Level = 1.0,  Color = Color.FromArgb(255, 0, 0) }      // Red (100%)
-            };
+                // Fallback to white if no color stops are defined
+                return Color.FromArgb(255, 255, 255);
+            }
+
+            // If we only have one color stop, return that color
+            if (colorStops.Count == 1)
+            {
+                return colorStops[0].Color;
+            }
 
             // Find the two color stops to interpolate between
-            for (int i = 0; i < colorStops.Length - 1; i++)
+            for (int i = 0; i < colorStops.Count - 1; i++)
             {
                 var lower = colorStops[i];
                 var upper = colorStops[i + 1];
@@ -278,8 +286,8 @@ namespace ThoNohT.NohBoard.Extra
                 }
             }
 
-            // Fallback to red for maximum heat
-            return Color.FromArgb(255, 0, 0);
+            // If heat level is beyond the last stop, return the last color
+            return colorStops[colorStops.Count - 1].Color;
         }
 
         /// <summary>

@@ -74,6 +74,13 @@ namespace ThoNohT.NohBoard.Keyboard
         [DataMember]
         public bool HeatmapEnabled { get; set; } = false;
 
+        /// <summary>
+        /// The heatmap configuration settings for this style.
+        /// Contains color gradient stops, blend settings, and scaling options.
+        /// </summary>
+        [DataMember]
+        public HeatmapSettings HeatmapSettings { get; set; } = new HeatmapSettings();
+
         #endregion The keyboard itself
 
         #region Defaults for elements
@@ -111,6 +118,8 @@ namespace ThoNohT.NohBoard.Keyboard
                 Name = this.Name,
                 BackgroundColor = this.BackgroundColor,
                 BackgroundImageFileName = this.BackgroundImageFileName,
+                HeatmapEnabled = this.HeatmapEnabled,
+                HeatmapSettings = this.HeatmapSettings?.Clone() ?? new HeatmapSettings(),
                 DefaultKeyStyle = (KeyStyle) this.DefaultKeyStyle.Clone(),
                 DefaultMouseSpeedIndicatorStyle =
                     (MouseSpeedIndicatorStyle) this.DefaultMouseSpeedIndicatorStyle.Clone(),
